@@ -22,10 +22,11 @@ test('Resolve run.tasks and staged scripts from the vite-plus config', async () 
 
   assert(!('scripts/build-sprite.ts' in issues.files));
   assert(!('scripts/check-format.ts' in issues.files));
+  assert(!('scripts/shared.ts' in issues.files));
 
   assert.deepEqual(counters, {
     ...baseCounters,
-    processed: 4,
-    total: 4,
+    processed: 6,
+    total: 6,
   });
 });
