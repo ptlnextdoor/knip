@@ -16,7 +16,32 @@ function isNumericKey(value: string | undefined) {
   return value != null && Number.isFinite(Number(value)) && String(Number(value)) === value;
 }
 
+function handleAwaitedImportMember(node: MemberExpression, s: WalkState) {
+  let object = node.object;
+  while (object.type === 'ParenthesizedExpression') object = object.expression;
+  if (object.type !== 'AwaitExpression' || object.argument.type !== 'ImportExpression') return false;
+  const importExpr = object.argument;
+  if (s.handledImportExpressions.has(importExpr.start) || !isStringLiteral(importExpr.source)) return false;
+  let memberName: string | undefined;
+  if (!node.computed && node.property.type === 'Identifier') memberName = node.property.name;
+  else if (node.computed && isStringLiteral(node.property)) memberName = getStringValue(node.property);
+  if (!memberName) return false;
+  s.handledImportExpressions.add(importExpr.start);
+  const caughtFlag = s.caughtTryBlockEnds.length > 0 ? IMPORT_FLAGS.CAUGHT : IMPORT_FLAGS.NONE;
+  s.addImport(
+    getStringValue(importExpr.source)!,
+    memberName,
+    undefined,
+    undefined,
+    importExpr.source.start,
+    IMPORT_FLAGS.DYNAMIC | caughtFlag
+  );
+  return true;
+}
+
 export function handleMemberExpression(node: MemberExpression, s: WalkState) {
+  if (handleAwaitedImportMember(node, s)) return;
+
   if (
     node.object.type === 'CallExpression' &&
     node.object.callee.type === 'Identifier' &&
